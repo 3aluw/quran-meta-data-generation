@@ -33,53 +33,79 @@ function levenshtein(a, b) {
     return matrix[a.length][b.length];
 }
 function getFirstLetters(text, count) {
-    if (count === void 0) { count = 8; }
+    if (count === void 0) { count = 10; }
     var normalized = normalizeArabic(text);
     // Only keep Arabic letters (ignoring digits, punctuation, etc.)
     var lettersOnly = normalized.match(/[\u0621-\u063A\u0641-\u064A]/g) || [];
     return lettersOnly.slice(0, count).join('');
 }
-function compareFirstLetters(text1, text2) {
-    //return getFirstLetters(text1) === getFirstLetters(text2);
-    return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 2;
+function compareFirstLetters(text1, text2, comparisonType) {
+    if (comparisonType === void 0) { comparisonType = "exact"; }
+    if (comparisonType == "exact")
+        return getFirstLetters(text1) === getFirstLetters(text2);
+    if (comparisonType == "levenshtein")
+        return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 2;
 }
-var isAyahTextRight = function (text, ayahId) {
+var isAyahTextRight = function (text, ayahId, comparisonType) {
     var _a;
+    if (comparisonType === void 0) { comparisonType = "exact"; }
     var foundAyahText = (_a = QalounData_1.quranData[ayahId - 1]) === null || _a === void 0 ? void 0 : _a.aya_text;
-    return compareFirstLetters(text, foundAyahText);
+    return compareFirstLetters(text, foundAyahText, comparisonType);
 };
-var checkSurroundingAyahs = function (text, ayahId) {
+var checkSurroundingAyahs = function (text, ayahId, comparisonType) {
+    if (comparisonType === void 0) { comparisonType = "levenshtein"; }
     var maxId = 6236;
     var maxOffset = 25;
     for (var offset = 1; offset <= maxOffset; offset++) {
         var backId = ayahId - offset;
-        if (backId >= 1 && isAyahTextRight(text, backId)) {
+        if (backId >= 1 && isAyahTextRight(text, backId, comparisonType)) {
             return backId;
         }
         var forwardId = ayahId + offset;
-        if (forwardId <= maxId && isAyahTextRight(text, forwardId)) {
+        if (forwardId <= maxId && isAyahTextRight(text, forwardId, comparisonType)) {
             return forwardId;
         }
     }
     return undefined;
 };
 var findAyah = function (ayahId) { var _a; return (_a = QalounData_1.quranData[ayahId - 1]) === null || _a === void 0 ? void 0 : _a.aya_text; };
-var unfoundAyahs = [];
-var newAyahIds = thumuns_1.HizbEighthList.map(function (verseId, index) {
-    var comparisonText = thumuns_1.textArray[index];
-    var IdAyah = findAyah(verseId);
-    if (!comparisonText)
-        return;
-    var result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId);
-    if (!result)
-        unfoundAyahs.push([verseId, comparisonText, IdAyah]);
-    return result;
-});
-/*
-const foundTexts = HizbEighthList.map((verseId, index) => {
-  const obj = { datasetText: textArray[index], foundText: findAyah(verseId) }
-  if (index < 10) console.log(index, obj)
-  return obj
+/* const newAyahIds = HizbEighthList.map((verseId, index) => {
+  const comparisonText = textArray[index]
+  const IdAyah = findAyah(verseId)
+  if (!comparisonText) return
+  const result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId)
+  if (!result) unfoundAyahs.push([verseId, comparisonText, IdAyah])
+  return result
 }) */
+var getNewAyahIds = function (comparisonType) {
+    return thumuns_1.HizbEighthList.map(function (verseId, index) {
+        var comparisonText = thumuns_1.textArray[index];
+        var IdAyah = findAyah(verseId);
+        if (!comparisonText)
+            return;
+        var result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId, comparisonType);
+        //if (!result) unfoundAyahs.push([verseId, comparisonText, IdAyah])
+        return result;
+    });
+};
+var unfoundAyahs = [];
+var idsAddedByLevenshteinMethod = [];
+var exactMatchIds = getNewAyahIds("exact");
+var levenshteinIds = getNewAyahIds("levenshtein");
+var hybridIds = exactMatchIds.map(function (id, index) {
+    if (id)
+        return id;
+    if (levenshteinIds[index]) {
+        var foundId = levenshteinIds[index];
+        idsAddedByLevenshteinMethod.push({ id: foundId, ayahText: findAyah(foundId), datasetText: thumuns_1.textArray[index], thumunIndex: index });
+        return foundId;
+    }
+    var defaultId = thumuns_1.HizbEighthList[index];
+    unfoundAyahs.push({ id: defaultId, ayahText: findAyah(defaultId), datasetText: thumuns_1.textArray[index], thumunIndex: index });
+});
+//this will console the best programmatic copy (it contains exactIds if not found: levenshteinId will be added)
+//hybridIds.forEach(e => console.log(e))
+//this will console data the Ids that are added via levenshtein method (compare the data with te dataset and modify incorrect Ids)
+idsAddedByLevenshteinMethod.forEach(function (e) { return console.log(e); });
+//this will console data the Ids that are not found (neither via exact match nor via Levenshtein method )
 //unfoundAyahs.forEach(e => console.log(e))
-newAyahIds.forEach(function (e) { return console.log(e); });

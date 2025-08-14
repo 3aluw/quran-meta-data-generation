@@ -5,6 +5,7 @@ import type { Surah, Page, AyahId, Juz, AyahNo, SurahMeta } from 'quran-meta'
 import { quranJson } from './quran'
 import { quranData } from "./QalounData"
 import { thumunObjects, HizbEighthList, textArray } from './thumuns'
+type comparisonType = "exact" | "levenshtein"
 
 function normalizeArabic(text: string) {
   return text
@@ -38,36 +39,35 @@ function levenshtein(a: String, b: string) {
   return matrix[a.length][b.length];
 }
 
-function getFirstLetters(text: string, count = 8) {
+function getFirstLetters(text: string, count = 10) {
   const normalized = normalizeArabic(text);
   // Only keep Arabic letters (ignoring digits, punctuation, etc.)
   const lettersOnly = normalized.match(/[\u0621-\u063A\u0641-\u064A]/g) || [];
   return lettersOnly.slice(0, count).join('');
 }
 
-function compareFirstLetters(text1: string, text2: string) {
-  //return getFirstLetters(text1) === getFirstLetters(text2);
-  return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 2;
+function compareFirstLetters(text1: string, text2: string, comparisonType: comparisonType = "exact") {
+  if (comparisonType == "exact") return getFirstLetters(text1) === getFirstLetters(text2);
+  if (comparisonType == "levenshtein") return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 2;
 }
 
-const isAyahTextRight = (text: string, ayahId: AyahId) => {
-
+const isAyahTextRight = (text: string, ayahId: AyahId, comparisonType: comparisonType = "exact") => {
   const foundAyahText = quranData[ayahId - 1]?.aya_text;
-  return compareFirstLetters(text, foundAyahText)
+  return compareFirstLetters(text, foundAyahText, comparisonType)
 }
 
-const checkSurroundingAyahs = (text: string, ayahId: number): number | undefined => {
+const checkSurroundingAyahs = (text: string, ayahId: number, comparisonType: comparisonType = "levenshtein"): number | undefined => {
   const maxId = 6236;
   const maxOffset = 25;
 
   for (let offset = 1; offset <= maxOffset; offset++) {
     const backId = ayahId - offset;
-    if (backId >= 1 && isAyahTextRight(text, backId)) {
+    if (backId >= 1 && isAyahTextRight(text, backId, comparisonType)) {
       return backId;
     }
 
     const forwardId = ayahId + offset;
-    if (forwardId <= maxId && isAyahTextRight(text, forwardId)) {
+    if (forwardId <= maxId && isAyahTextRight(text, forwardId, comparisonType)) {
       return forwardId;
     }
   }
@@ -77,22 +77,53 @@ const checkSurroundingAyahs = (text: string, ayahId: number): number | undefined
 
 const findAyah = (ayahId: AyahId) => quranData[ayahId - 1]?.aya_text;
 
-const unfoundAyahs: [number, string, string][] = []
 
-const newAyahIds = HizbEighthList.map((verseId, index) => {
+
+/* const newAyahIds = HizbEighthList.map((verseId, index) => {
   const comparisonText = textArray[index]
   const IdAyah = findAyah(verseId)
   if (!comparisonText) return
   const result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId)
   if (!result) unfoundAyahs.push([verseId, comparisonText, IdAyah])
   return result
+}) */
+const getNewAyahIds = (comparisonType: comparisonType) => {
+  return HizbEighthList.map((verseId, index) => {
+    const comparisonText = textArray[index]
+    const IdAyah = findAyah(verseId)
+    if (!comparisonText) return
+    const result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId, comparisonType)
+    //if (!result) unfoundAyahs.push([verseId, comparisonText, IdAyah])
+    return result
+  })
+}
+interface ICheckAyah {
+  id: AyahId
+  ayahText: string
+  datasetText: string
+  thumunIndex:number
+}
+const unfoundAyahs: ICheckAyah[] = []
+const idsAddedByLevenshteinMethod: ICheckAyah[] = []
+
+const exactMatchIds = getNewAyahIds("exact")
+const levenshteinIds = getNewAyahIds("levenshtein")
+
+
+const hybridIds = exactMatchIds.map((id, index) => {
+  if (id) return id
+  if (levenshteinIds[index]) {
+    const foundId = levenshteinIds[index]
+    idsAddedByLevenshteinMethod.push({ id: foundId, ayahText: findAyah(foundId), datasetText: textArray[index],thumunIndex:index })
+    return foundId
+  }
+  const defaultId = HizbEighthList[index]
+  unfoundAyahs.push({ id: defaultId, ayahText: findAyah(defaultId), datasetText: textArray[index],thumunIndex:index })
 })
 
-/* 
-const foundTexts = HizbEighthList.map((verseId, index) => {
-  const obj = { datasetText: textArray[index], foundText: findAyah(verseId) }
-  if (index < 10) console.log(index, obj)
-  return obj
-}) */
+//this will console the best programmatic copy (it contains exactIds if not found: levenshteinId will be added)
+//hybridIds.forEach(e => console.log(e))
+//this will console data the Ids that are added via levenshtein method (compare the data with te dataset and modify incorrect Ids)
+idsAddedByLevenshteinMethod.forEach(e => console.log(e))
+//this will console data the Ids that are not found (neither via exact match nor via Levenshtein method )
 //unfoundAyahs.forEach(e => console.log(e))
-newAyahIds.forEach(e => console.log(e))

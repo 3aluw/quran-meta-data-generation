@@ -4,15 +4,19 @@ var QalounData_1 = require("./QalounData");
 var thumuns_1 = require("./thumuns");
 function normalizeArabic(text) {
     return text
-        // Replace special letters (ٱ → ا)
-        .replace(/\u0671/g, 'ا')
-        .replace(/\u0670/g, 'ا')
-        .replace(/[إأآءؤئٶٷٸ]/g, 'أ') // all visible Hamzas → أ
-        .replace(/[\u0654\u0655]/g, 'أ') // combining Hamza above (ٔ) → أ
-        // Remove tashkeel
-        .replace(/[\u0610-\u061A\u064B-\u065F\u06D6-\u06ED\u0670]/g, '')
-        .replace(/\u06CC/g, 'ي') // Persian ی → Arabic ي (optional)    
-        .replace(/\s+/g, ''); // Remove all whitespace
+        // Normalize Alef variants to bare Alef
+        .replace(/[\u0622\u0623\u0625\u0671\u0670]/g, 'ا')
+        // Normalize Hamza-on-Waw or Hamza-on-Ya to plain Hamza form (أ)
+        .replace(/[ءؤئ]/g, 'أ')
+        // Normalize Yeh forms: Persian (ی), Urdu (ے) → Arabic (ي)
+        .replace(/[\u06CC\u06D2]/g, 'ي')
+        // Normalize Teh Marbuta to Heh (optional depending on your need)
+        .replace(/\u0629/g, 'ه')
+        // Remove ALL combining marks (tashkeel, Qur’anic signs, etc.)
+        .replace(/\p{M}+/gu, '')
+        // Remove extra spaces
+        .replace(/\s+/g, '')
+        .trim();
 }
 // Levenshtein distance
 function levenshtein(a, b) {
@@ -78,13 +82,11 @@ var findAyah = function (ayahId) { var _a; return (_a = QalounData_1.quranData[a
   return result
 }) */
 var getNewAyahIds = function (comparisonType) {
-    return thumuns_1.HizbEighthList.map(function (verseId, index) {
+    return thumuns_1.newIds.map(function (verseId, index) {
         var comparisonText = thumuns_1.textArray[index];
-        var IdAyah = findAyah(verseId);
         if (!comparisonText)
             return;
-        var result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId, comparisonType);
-        //if (!result) unfoundAyahs.push([verseId, comparisonText, IdAyah])
+        var result = isAyahTextRight(comparisonText, verseId, comparisonType) ? verseId : checkSurroundingAyahs(comparisonText, verseId, comparisonType);
         return result;
     });
 };
@@ -100,12 +102,35 @@ var hybridIds = exactMatchIds.map(function (id, index) {
         idsAddedByLevenshteinMethod.push({ id: foundId, ayahText: findAyah(foundId), datasetText: thumuns_1.textArray[index], thumunIndex: index });
         return foundId;
     }
-    var defaultId = thumuns_1.HizbEighthList[index];
+    var defaultId = thumuns_1.newIds[index];
     unfoundAyahs.push({ id: defaultId, ayahText: findAyah(defaultId), datasetText: thumuns_1.textArray[index], thumunIndex: index });
 });
 //this will console the best programmatic copy (it contains exactIds if not found: levenshteinId will be added)
 //hybridIds.forEach(e => console.log(e))
 //this will console data the Ids that are added via levenshtein method (compare the data with te dataset and modify incorrect Ids)
-idsAddedByLevenshteinMethod.forEach(function (e) { return console.log(e); });
-//this will console data the Ids that are not found (neither via exact match nor via Levenshtein method )
-//unfoundAyahs.forEach(e => console.log(e))
+//idsAddedByLevenshteinMethod.forEach(e => console.log(e))
+//this will log the Ids that are not found (neither via exact match nor via Levenshtein method )
+//unfoundAyahs.forEach(e => console.log(e)) //logs 0 meaning there all ayahs are matched
+/* Check using ۞ in the Qaloun dataset */
+//the Qaloun dataset has 427 marked thumuns(out of 480)
+//check using ۞ in the quran Qaloun dataset (thumuns marked in the qaloun dataset but not added to the list)
+/*  const unPickedThumuns = quranData.filter((ayahObj,index)=>{
+  return ayahObj.aya_text.startsWith('۞') && !newIds.includes(ayahObj.id)
+ })
+console.log(unPickedThumuns); // getting [] SO all ayahs starting with ۞ are picked up   */
+//this will log all thumuns that are picked but not marked in the Qaloun dataset
+var pickedWithoutMark = QalounData_1.quranData.filter(function (ayahObj, index) {
+    return !ayahObj.aya_text.includes('۞') && thumuns_1.newIds.includes(ayahObj.id);
+});
+console.log(pickedWithoutMark.length);
+/* LOGICAL TEST */
+//this will log each id that is larger then the next id (which is an error)
+/* const IdLargerThenNext = newIds.filter((id,index,array)=>{
+  return id <=  array[index-1]
+})
+console.log(IdLargerThenNext); */
+//this will log all ids that are very close to each other : A suspect of an error (not always an error bcs some ayahs are large)
+/*  const IdCloseToThenNext = newIds.filter((id,index,array)=>{
+  return id -  array[index-1] <=3
+})
+console.log(IdCloseToThenNext); //All checked */ 

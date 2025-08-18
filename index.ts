@@ -80,16 +80,6 @@ const checkSurroundingAyahs = (text: string, ayahId: number, comparisonType: com
 
 const findAyah = (ayahId: AyahId) => quranData[ayahId - 1]?.aya_text;
 
-
-
-/* const newAyahIds = HizbEighthList.map((verseId, index) => {
-  const comparisonText = textArray[index]
-  const IdAyah = findAyah(verseId)
-  if (!comparisonText) return
-  const result = isAyahTextRight(comparisonText, verseId) ? verseId : checkSurroundingAyahs(comparisonText, verseId)
-  if (!result) unfoundAyahs.push([verseId, comparisonText, IdAyah])
-  return result
-}) */
 const getNewAyahIds = (comparisonType: comparisonType) => {
   return newIds.map((verseId, index) => {
     const comparisonText = textArray[index]

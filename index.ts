@@ -1,8 +1,7 @@
 import { meta, findPage, getSurahMeta, findSurahAyahByAyahId, checkValidSurahAyah, findAyahIdBySurah, findJuz } from 'quran-meta'
 
-import type { Surah, Page, AyahId, Juz, AyahNo, SurahMeta } from 'quran-meta'
+import type {  AyahId } from 'quran-meta'
 
-import { quranJson } from './quran'
 import { quranData } from "./QalounData"
 import {  newIds, textArray } from './thumuns'
 type comparisonType = "exact" | "levenshtein"

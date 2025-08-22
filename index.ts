@@ -1,8 +1,7 @@
-import { meta, findPage, getSurahMeta, findSurahAyahByAyahId, checkValidSurahAyah, findAyahIdBySurah, findJuz } from 'quran-meta'
 
 import type {  AyahId } from 'quran-meta'
 
-import { quranData } from "./QalounData"
+import { qulunData } from "./QalounData"
 import {  newIds, textArray } from './thumuns'
 type comparisonType = "exact" | "levenshtein"
 
@@ -55,7 +54,7 @@ function compareFirstLetters(text1: string, text2: string, comparisonType: compa
 }
 
 const isAyahTextRight = (text: string, ayahId: AyahId, comparisonType: comparisonType = "exact") => {
-  const foundAyahText = quranData[ayahId - 1]?.aya_text;
+  const foundAyahText = qulunData[ayahId - 1]?.aya_text;
   return compareFirstLetters(text, foundAyahText, comparisonType)
 }
 
@@ -78,8 +77,10 @@ const checkSurroundingAyahs = (text: string, ayahId: number, comparisonType: com
   return undefined;
 };
 
-const findAyah = (ayahId: AyahId) => quranData[ayahId - 1]?.aya_text;
+const findAyah = (ayahId: AyahId) => qulunData[ayahId - 1]?.aya_text;
 
+
+/**************************************PROVIDE A TEXT ARRAY / APPROXIMATE AYAH IDs AND GET THUMUNS IDS... */
 const getNewAyahIds = (comparisonType: comparisonType) => {
   return newIds.map((verseId, index) => {
     const comparisonText = textArray[index]
@@ -127,16 +128,16 @@ const hybridIds = exactMatchIds.map((id, index) => {
                    /* Check using ۞ in the Qaloun dataset */
 //the Qaloun dataset has 427 marked thumuns(out of 480)
 //check using ۞ in the quran Qaloun dataset (thumuns marked in the qaloun dataset but not added to the list)
-/*  const unPickedThumuns = quranData.filter((ayahObj,index)=>{
+/*  const unPickedThumuns = qulunData.filter((ayahObj,index)=>{
   return ayahObj.aya_text.startsWith('۞') && !newIds.includes(ayahObj.id)
  })
 console.log(unPickedThumuns); // getting [] SO all ayahs starting with ۞ are picked up   */
 
 //this will log all thumuns that are picked but not marked in the Qaloun dataset
-  const pickedWithoutMark = quranData.filter((ayahObj,index)=>{
+/*   const pickedWithoutMark = qulunData.filter((ayahObj,index)=>{
   return !ayahObj.aya_text.startsWith('۞') && newIds.includes(ayahObj.id)
  })
- console.log(pickedWithoutMark);
+ console.log(pickedWithoutMark); */
 
  
 
@@ -152,3 +153,6 @@ console.log(IdLargerThenNext); */
   return id -  array[index-1] <=3
 })
 console.log(IdCloseToThenNext); //All checked */
+
+
+

@@ -138,4 +138,16 @@ arrayLog(hybridIds);
 //console.log(idsAddedByLevenshteinMethod); //ALL CHECKED
 //console.log(unfoundAyahs) //ALL CHECKED
 
-
+ /* LOGICAL TEST */
+//log each id that is larger then the next id (which is an error)
+ const IdLargerThenNext = hybridIds.filter((id,index,array)=>{
+  return id <=  array[index-1]
+})
+//console.log(IdLargerThenNext); //CHECKED
+//log ids that are not from the same surah as the source ids 
+const notSameSurah = hybridIds.filter((id,index)=>{
+const surahInSource = sourceDataset[sourceIds[index]-1].sura_no
+const surahInOutput = outputDataset[id!-1].sura_no
+return surahInOutput !== surahInSource
+})
+//console.log(notSameSurah); //CHECKED

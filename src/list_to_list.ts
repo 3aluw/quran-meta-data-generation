@@ -93,6 +93,7 @@ const findAyahIdInOutput = (surahId: number, ayahNo: number) => {
   return outputDataset.find(ayah => ayah.sura_no === surahId && ayah.aya_no === ayahNo) || outputDataset.find(ayah => ayah.sura_no === surahId && ayah.aya_no === 1)!
 }
 
+//enter an ayahId of source and get the corresponding ayahId in output that matches it in sura_no and aya_no 
 const adjustAyahToOutput = (ayahId: AyahId) => {
   const source_sura_no = sourceDataset[ayahId - 1].sura_no;
   const source_aya_no = sourceDataset[ayahId - 1].aya_no;
@@ -100,6 +101,7 @@ const adjustAyahToOutput = (ayahId: AyahId) => {
   const isAyahNumbersMatch = outputAyah && source_sura_no === outputAyah.sura_no && source_aya_no === outputAyah.aya_no
   return isAyahNumbersMatch ? ayahId : findAyahIdInOutput(source_sura_no, source_aya_no).id
 }
+//generate new Ids based on source ids
 const mapToOutput = (comparisonType: comparisonType) => {
   const outputIds = sourceIds.map((ayahId) => {
     const hafsText = findAyahInSource(ayahId);
@@ -117,6 +119,7 @@ const levenshteinIds = mapToOutput("levenshtein")
 const unfoundAyahs: any = []
 const idsAddedByLevenshteinMethod: any = []
 
+//hybrid approach: first exact match, then levenshtein, then default to same id adjusted to output dataset
 const hybridIds = exactMatchIds.map((id, index) => {
   if (id) return id
   if (levenshteinIds[index]) {
@@ -131,6 +134,7 @@ const hybridIds = exactMatchIds.map((id, index) => {
   return outputId
 })
 arrayLog(hybridIds);
+//CHECK ids that are not added by exact match manually
 //console.log(idsAddedByLevenshteinMethod); //ALL CHECKED
 //console.log(unfoundAyahs) //ALL CHECKED
 

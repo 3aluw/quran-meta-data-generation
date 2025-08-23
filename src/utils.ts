@@ -46,5 +46,11 @@ export function getFirstLetters(text: string, count = 10) {
 
 export function compareFirstLetters(text1: string, text2: string, comparisonType: comparisonType = "exact") {
   if (comparisonType == "exact") return getFirstLetters(text1) === getFirstLetters(text2);
-  if (comparisonType == "levenshtein") return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 2;
+  if (comparisonType == "levenshtein") return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 4;
+}
+
+export const arrayLog = (arr: any[], )=> {
+  for (let i = 0; i < arr.length; i += 20) {
+  console.log( arr.slice(i, i + 20).map(v => v === undefined ? "undefined" : v).join(',') + ",");
+}
 }

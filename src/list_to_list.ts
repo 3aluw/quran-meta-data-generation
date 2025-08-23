@@ -1,13 +1,21 @@
 //generates a list of ids based on another riwaya list of ids
 /**************************TAKE AN AYAH ID ARRAY (ie: FROM HAFS) AND TRANSFORM IT TO QALUN */
-import { compareFirstLetters, getFirstLetters, normalizeArabic } from './utils'
-import type {  AyahId } from 'quran-meta'
+import { compareFirstLetters, arrayLog } from './utils'
+import type { AyahId } from 'quran-meta'
 import hafsData from './HafsData'
 import { qulunData } from "./QalounData"
+
 type comparisonType = "exact" | "levenshtein"
+
+interface ICheckAyah {
+  id: AyahId
+  ayahText: string
+  datasetText: string
+  thumunIndex: number
+}
 //hafs ruku ids
 
-const sourceIds :AyahId[] =  [
+const sourceIds: AyahId[] = [
   1, 8, 15, 28, 37, 47, 54, 67, 69, 79, 90, 94, 104, 111, 120, 129, 137, 149,
   155, 160, 171, 175, 184, 190, 196, 204, 218, 224, 229, 236, 239, 243, 250,
   256, 261, 265, 268, 274, 281, 289, 291, 294, 303, 314, 324, 335, 348, 357,
@@ -59,14 +67,15 @@ const findAyahInOutput = (ayahId: AyahId) => outputDataset[ayahId - 1]?.aya_text
 const isAyahTextRight = (text: string, ayahId: AyahId, comparisonType: comparisonType = "exact") => {
   const foundAyahText = outputDataset[ayahId - 1]?.aya_text;
 
-  return text && foundAyahText ? compareFirstLetters(text, foundAyahText, comparisonType) : false; 
+  return text && foundAyahText ? compareFirstLetters(text, foundAyahText, comparisonType
+  ) : false;
 }
 
 const checkSurroundingAyahs = (text: string, ayahId: number, comparisonType: comparisonType = "levenshtein"): number | undefined => {
   const maxId = outputDataset.length;
   const maxOffset = 25;
 
-  for (let offset = 1; offset <= maxOffset; offset++) {
+  for (let offset = 0; offset <= maxOffset; offset++) {
     const backId = ayahId - offset;
     if (backId >= 1 && isAyahTextRight(text, backId, comparisonType)) {
       return backId;
@@ -80,26 +89,49 @@ const checkSurroundingAyahs = (text: string, ayahId: number, comparisonType: com
 
   return undefined;
 };
-const findAyahIdInOutput = (surahId:number, ayahNo:number)=>{
-  return outputDataset.find(ayah=>ayah.sura_no===surahId && ayah.aya_no===ayahNo) || outputDataset.find(ayah=>ayah.sura_no===surahId && ayah.aya_no===1)!
+const findAyahIdInOutput = (surahId: number, ayahNo: number) => {
+  return outputDataset.find(ayah => ayah.sura_no === surahId && ayah.aya_no === ayahNo) || outputDataset.find(ayah => ayah.sura_no === surahId && ayah.aya_no === 1)!
 }
+
 const adjustAyahToOutput = (ayahId: AyahId) => {
   const source_sura_no = sourceDataset[ayahId - 1].sura_no;
   const source_aya_no = sourceDataset[ayahId - 1].aya_no;
   const outputAyah = outputDataset.find(ayah => ayah.id === ayahId);
- const  isAyahNumbersMatch = outputAyah && source_sura_no === outputAyah.sura_no && source_aya_no === outputAyah.aya_no
-  return isAyahNumbersMatch ? ayahId :  findAyahIdInOutput(source_sura_no, source_aya_no).id
+  const isAyahNumbersMatch = outputAyah && source_sura_no === outputAyah.sura_no && source_aya_no === outputAyah.aya_no
+  return isAyahNumbersMatch ? ayahId : findAyahIdInOutput(source_sura_no, source_aya_no).id
 }
-const mapToOutput = (comparisonType:comparisonType)=> {
+const mapToOutput = (comparisonType: comparisonType) => {
   const outputIds = sourceIds.map((ayahId) => {
-  const hafsText = findAyahInSource(ayahId);
-  const adjustedId  = adjustAyahToOutput(ayahId);
-  const outputText = findAyahInOutput(adjustedId )
-  if (!hafsText || !outputText) return undefined
-  const result = compareFirstLetters(hafsText, outputText,comparisonType) ? ayahId : checkSurroundingAyahs(hafsText, adjustedId , comparisonType)
-return result
-})
+    const hafsText = findAyahInSource(ayahId);
+    const adjustedId = adjustAyahToOutput(ayahId);
+    const outputText = findAyahInOutput(adjustedId)
+    if (!hafsText || !outputText) return undefined
+    const result = compareFirstLetters(hafsText, outputText, comparisonType) ? adjustedId : checkSurroundingAyahs(hafsText, adjustedId, comparisonType)
+    return result
+  })
   return outputIds
 }
-//console.log(mapToOutput("exact").filter(id=>!id));
-//console.log(mapToOutput("levenshtein").filter(id=>!id));
+const exactMatchIds = mapToOutput("exact") 
+const levenshteinIds = mapToOutput("levenshtein")
+
+const unfoundAyahs: any = []
+const idsAddedByLevenshteinMethod: any = []
+
+const hybridIds = exactMatchIds.map((id, index) => {
+  if (id) return id
+  if (levenshteinIds[index]) {
+    const foundId = levenshteinIds[index]
+    idsAddedByLevenshteinMethod.push({ id: foundId, sourceId: sourceIds[index], index })
+    return foundId
+  }
+  const defaultId = sourceIds[index]
+  const sourceAyah = sourceDataset[defaultId - 1]
+  const outputId = adjustAyahToOutput(defaultId)
+  unfoundAyahs.push({ outputId, ayahText: sourceAyah.aya_text, surah: sourceAyah.sura_no, ayah: sourceAyah.aya_no, })
+  return outputId
+})
+arrayLog(hybridIds);
+//console.log(idsAddedByLevenshteinMethod); //ALL CHECKED
+//console.log(unfoundAyahs) //ALL CHECKED
+
+

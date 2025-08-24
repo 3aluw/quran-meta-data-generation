@@ -1,4 +1,4 @@
-import type {  AyahId } from 'quran-meta'
+import type { AyahId } from 'quran-meta'
 type comparisonType = "exact" | "levenshtein"
 
 export function normalizeArabic(text: string) {
@@ -49,8 +49,12 @@ export function compareFirstLetters(text1: string, text2: string, comparisonType
   if (comparisonType == "levenshtein") return levenshtein(getFirstLetters(text1), getFirstLetters(text2)) <= 4;
 }
 
-export const arrayLog = (arr: any[], )=> {
+export const arrayLog = (arr: any[],) => {
+  if (arr.length < 50) {
+    console.log(arr);
+    return
+  }
   for (let i = 0; i < arr.length; i += 20) {
-  console.log( arr.slice(i, i + 20).map(v => v === undefined ? "undefined" : v).join(',') + ",");
-}
+    console.log(arr.slice(i, i + 20).map(v => v === undefined ? "undefined" : v).join(',') + ",");
+  }
 }

@@ -1,4 +1,4 @@
-export const quranData = [
+export const qulunData = [
 	{
 		"id" : 1,
 		"jozz" : 1,
